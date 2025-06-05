@@ -1,0 +1,51 @@
+
+services:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Contenedor de PostgreSQL
+  # ─────────────────────────────────────────────────────────────────────────────
+  db:
+    image: postgres:14-alpine
+    container_name: postgres_curso_rpg
+    environment:
+      # Username / Password / DB que queremos crear
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: curso_rpg
+
+    # Montamos el volumen de datos para persistencia, y el init.sql para inicializar
+    volumes:
+      - pgdata_curso_rpg:/var/lib/postgresql/data
+      - ./init-db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+    ports:
+      - "5432:5432"
+    # Opcional: para siempre reiniciar si falla
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Contenedor de la aplicación Spring Boot
+  # ─────────────────────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: randomuserapi_app
+    depends_on:
+      - db
+    # Mapeo del puerto: dentro del contenedor Spring Boot corre en 8080
+    ports:
+      - "8081:8080"
+    environment:
+      # Configuración de Spring Boot para conectar con el contenedor 'db'
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/curso_rpg
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_JPA_SHOW_SQL: "true"
+      # Opcional: si quieres desactivar el banner u otros ajustes
+      SPRING_MAIN_LOGGING_LEVEL: "INFO"
+    restart: unless-stopped
+
+# Volumen persistente para Postgres
+volumes:
+  pgdata_curso_rpg:
